@@ -7,8 +7,10 @@
   "private": true,
   "dependencies": {
     "@sap/cds": "^6",
+    "@sap/cds-hana": "^2",
+    "@sap/xssec": "^3",
     "express": "^4",
-    "@sap/cds-hana": "^2"
+    "passport": "^0.7.0"
   },
   "scripts": {
     "start": "cds-serve"
@@ -28,7 +30,8 @@
     "requires": {
       "db": {
         "kind": "hana-cloud"
-      }
+      },
+      "auth": "xsuaa"
     }
   }
 }

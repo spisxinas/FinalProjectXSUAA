@@ -1,7 +1,92 @@
-_schema-version: '3.1'
+_schema-version: "3.1"
 ID: Final
+description: A simple CAP project.
 version: 1.0.0
-description: "A simple CAP project."
+modules:
+  - name: Final2-srv
+    type: nodejs
+    path: gen/srv
+    requires:
+      - name: Final2-db
+      - name: uaa_Final
+    provides:
+      - name: srv-api
+        properties:
+          srv-url: ${default-url}
+    parameters:
+      buildpack: nodejs_buildpack
+      readiness-health-check-http-endpoint: /health
+      readiness-health-check-type: http
+    build-parameters:
+      builder: npm
+  - name: Final2-db-deployer
+    type: hdb
+    path: db
+    requires:
+      - name: Final2-db
+    parameters:
+      buildpack: nodejs_buildpack
+  - name: Final-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: Final-destination-service
+        parameters:
+          content-target: true
+      - name: Final_html_repo_host
+        parameters:
+          service-key:
+            name: Final_html_repo_host-key
+      - name: uaa_Final
+        parameters:
+          service-key:
+            name: uaa_Final-key
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Name: ManagedAppRouter_Final_html_repo_host
+              ServiceInstanceName: Final-html5-app-host-service
+              ServiceKeyName: Final_html_repo_host-key
+              sap.cloud.service: ManagedAppRouter
+            - Authentication: OAuth2UserTokenExchange
+              Name: ManagedAppRouter_uaa_Final
+              ServiceInstanceName: Final-xsuaa-service
+              ServiceKeyName: uaa_Final-key
+              sap.cloud.service: ManagedAppRouter
+          existing_destinations_policy: ignore
+    build-parameters:
+      no-source: true
+resources:
+  - name: Final2-db
+    type: com.sap.xs.hdi-container
+    parameters:
+      service: hana
+      service-plan: hdi-shared
+  - name: Final-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      config:
+        HTML5Runtime_enabled: true
+        version: 1.0.0
+      service: destination
+      service-name: Final-destination-service
+      service-plan: lite
+  - name: Final_html_repo_host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-name: Final-html5-app-host-service
+      service-plan: app-host
+  - name: uaa_Final
+    type: org.cloudfoundry.managed-service
+    parameters:
+      path: ./xs-security.json
+      service: xsuaa
+      service-name: Final-xsuaa-service
+      service-plan: application
+      config:
+        xsappname: Final-${org}-${space}
+        tenant-mode: dedicated
 parameters:
   enable-parallel-deployments: true
 build-parameters:
@@ -10,34 +95,3 @@ build-parameters:
       commands:
         - npm ci
         - npx cds build --production
-modules:
-  - name: Final-srv
-    type: nodejs
-    path: gen/srv
-    parameters:
-      buildpack: nodejs_buildpack
-      readiness-health-check-type: http
-      readiness-health-check-http-endpoint: /health
-    build-parameters:
-      builder: npm
-    provides:
-      - name: srv-api # required by consumers of CAP services (e.g. approuter)
-        properties:
-          srv-url: ${default-url}
-    requires:
-      - name: Final-db
-
-  - name: Final-db-deployer
-    type: hdb
-    path: db
-    parameters:
-      buildpack: nodejs_buildpack
-    requires:
-      - name: Final-db
-
-resources:
-  - name: Final-db
-    type: com.sap.xs.hdi-container
-    parameters:
-      service: hana
-      service-plan: hdi-shared
